@@ -73,7 +73,7 @@ class ImageDataset(Dataset):
         elif self.mode == "Valid" or self.mode == "Test":
             # Use PyTorch's own data enhancement to enlarge and enhance data
             self.pre_transform = transforms.Compose([
-                transforms.Resize(342),
+                transforms.Resize(256),
                 transforms.CenterCrop([self.image_size, self.image_size]),
             ])
         else:
