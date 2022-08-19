@@ -1,13 +1,14 @@
-# Xception-PyTorch
+# MobileNetV1-PyTorch
 
 ## Overview
 
 This repository contains an op-for-op PyTorch reimplementation
-of [Xception: Deep Learning with Depthwise Separable Convolutions](https://arxiv.org/pdf/1610.02357v3.pdf).
+of [MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications](https://arxiv.org/pdf/1704.04861v1.pdf)
+.
 
 ## Table of contents
 
-- [Xception-PyTorch](#xception-pytorch)
+- [MobileNetV1-PyTorch](#mobilenetv1-pytorch)
     - [Overview](#overview)
     - [Table of contents](#table-of-contents)
     - [Download weights](#download-weights)
@@ -19,7 +20,7 @@ of [Xception: Deep Learning with Depthwise Separable Convolutions](https://arxiv
     - [Result](#result)
     - [Contributing](#contributing)
     - [Credit](#credit)
-        - [Xception: Deep Learning with Depthwise Separable Convolutions](#xception-deep-learning-with-depthwise-separable-convolutions)
+        - [MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications](#mobilenets-efficient-convolutional-neural-networks-for-mobile-vision-applications)
 
 ## Download weights
 
@@ -41,12 +42,12 @@ Both training and testing only need to modify the `config.py` file.
 
 ### Test
 
-- line 29: `model_arch_name` change to `xception`.
-- line 31: `model_mean_parameters` change to `[0.5, 0.5, 0.5]`.
-- line 32: `model_std_parameters` change to `[0.5, 0.5, 0.5]`.
+- line 29: `model_arch_name` change to `mobilenet_v1`.
+- line 31: `model_mean_parameters` change to `[0.485, 0.456, 0.406]`.
+- line 32: `model_std_parameters` change to `[0.229, 0.224, 0.225]`.
 - line 34: `model_num_classes` change to `1000`.
 - line 36: `mode` change to `test`.
-- line 91: `model_weights_path` change to `./results/pretrained_models/xception`.
+- line 89: `model_weights_path` change to `./results/pretrained_models/MobileNetV1-ImageNet_1K.pth.tar`.
 
 ```bash
 python3 test.py
@@ -54,12 +55,12 @@ python3 test.py
 
 ### Train model
 
-- line 29: `model_arch_name` change to `xception`.
-- line 31: `model_mean_parameters` change to `[0.5, 0.5, 0.5]`.
-- line 32: `model_std_parameters` change to `[0.5, 0.5, 0.5]`.
+- line 29: `model_arch_name` change to `mobilenet_v1`.
+- line 31: `model_mean_parameters` change to `[0.485, 0.456, 0.406]`.
+- line 32: `model_std_parameters` change to `[0.229, 0.224, 0.225]`.
 - line 34: `model_num_classes` change to `1000`.
 - line 36: `mode` change to `train`.
-- line 50: `pretrained_model_weights_path` change to `./results/pretrained_models/Xception-ImageNet_1K-a0b40234.pth.tar`.
+- line 50: `pretrained_model_weights_path` change to `./results/pretrained_models/MobileNetV1-ImageNet_1K.pth.tar`.
 
 ```bash
 python3 train.py
@@ -67,12 +68,12 @@ python3 train.py
 
 ### Resume train model
 
-- line 29: `model_arch_name` change to `xception`.
-- line 31: `model_mean_parameters` change to `[0.5, 0.5, 0.5]`.
-- line 32: `model_std_parameters` change to `[0.5, 0.5, 0.5]`.
+- line 29: `model_arch_name` change to `mobilenet_v1`.
+- line 31: `model_mean_parameters` change to `[0.485, 0.456, 0.406]`.
+- line 32: `model_std_parameters` change to `[0.229, 0.224, 0.225]`.
 - line 34: `model_num_classes` change to `1000`.
 - line 36: `mode` change to `train`.
-- line 53: `resume` change to `./samples/xception-ImageNet_1K/epoch_xxx.pth.tar`.
+- line 53: `resume` change to `./samples/mobilenet_v1-ImageNet_1K/epoch_xxx.pth.tar`.
 
 ```bash
 python3 train.py
@@ -80,16 +81,16 @@ python3 train.py
 
 ## Result
 
-Source of original paper results: [https://arxiv.org/pdf/1610.02357v3.pdf](https://arxiv.org/pdf/1610.02357v3.pdf))
+Source of original paper results: [https://arxiv.org/pdf/1704.04861v1.pdf](https://arxiv.org/pdf/1704.04861v1.pdf))
 
 In the following table, the top-x error value in `()` indicates the result of the project, and `-` indicates no test.
 
-|  Model   |   Dataset   | Top-1 error (val) | Top-5 error (val) |
-|:--------:|:-----------:|:-----------------:|:-----------------:|
-| xception | ImageNet_1K | 21.0%(**21.2%**)  |  5.5%(**5.6%**)   |
+|    Model     |   Dataset   | Top-1 error (val) | Top-5 error (val) |
+|:------------:|:-----------:|:-----------------:|:-----------------:|
+| mobilenet_v1 | ImageNet_1K |   29.4%(**-**)    |     -(**-**)      |
 
 ```bash
-# Download `Xception-ImageNet_1K-a0b40234.pth.tar` weights to `./results/pretrained_models`
+# Download `mobilenet_v1.pth.tar` weights to `./results/pretrained_models`
 # More detail see `README.md<Download weights>`
 python3 ./inference.py 
 ```
@@ -101,8 +102,8 @@ Input:
 Output:
 
 ```text
-Build `xception` model successfully.
-Load `xception` model weights `/Xception-PyTorch/results/pretrained_models/Xception-ImageNet_1K-a0b40234.pth.tar` successfully.
+Build `mobilenet_v1` model successfully.
+Load `mobilenet_v1` model weights `/MobileNetV1-PyTorch/results/pretrained_models/mobilenet_v1.pth.tar` successfully.
 tench, Tinca tinca                                                          (81.23%)
 barracouta, snoek                                                           (1.41%)
 armadillo                                                                   (0.80%)
@@ -119,30 +120,29 @@ I look forward to seeing what the community does with these models!
 
 ### Credit
 
-#### Xception: Deep Learning with Depthwise Separable Convolutions
+#### MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications
 
-*François Chollet*
+*Andrew G. Howard, Menglong Zhu, Bo Chen, Dmitry Kalenichenko, Weijun Wang, Tobias Weyand, Marco Andreetto, Hartwig
+Adam*
 
 ##### Abstract
 
-We present an interpretation of Inception modules in convolutional neural networks as being an intermediate step
-in-between regular convolution and the depthwise separable convolution operation (a depthwise convolution followed by a
-pointwise convolution). In this light, a depthwise separable convolution can be understood as an Inception module with a
-maximally large number of towers. This observation leads us to propose a novel deep convolutional neural network
-architecture inspired by Inception, where Inception modules have been replaced with depthwise separable convolutions. We
-show that this architecture, dubbed Xception, slightly outperforms Inception V3 on the ImageNet dataset (which Inception
-V3 was designed for), and significantly outperforms Inception V3 on a larger image classification dataset comprising 350
-million images and 17,000 classes. Since the Xception architecture has the same number of parameters as Inception V3,
-the performance gains are not due to increased capacity but rather to a more efficient use of model parameters.
+We present a class of efficient models called MobileNets for mobile and embedded vision applications. MobileNets are
+based on a streamlined architecture that uses depth-wise separable convolutions to build light weight deep neural
+networks. We introduce two simple global hyper-parameters that efficiently trade off between latency and accuracy. These
+hyper-parameters allow the model builder to choose the right sized model for their application based on the constraints
+of the problem. We present extensive experiments on resource and accuracy tradeoffs and show strong performance compared
+to other popular models on ImageNet classification. We then demonstrate the effectiveness of MobileNets across a wide
+range of applications and use cases including object detection, finegrain classification, face attributes and large
+scale geo-localization.
 
-[[Paper]](https://arxiv.org/pdf/1610.02357v3.pdf)
+[[Paper]](https://arxiv.org/pdf/1704.04861v1.pdf)
 
 ```bibtex
-@inproceedings{chollet2017xception,
-  title={Xception: Deep learning with depthwise separable convolutions},
-  author={Chollet, Fran{\c{c}}ois},
-  booktitle={Proceedings of the IEEE conference on computer vision and pattern recognition},
-  pages={1251--1258},
+@article{howard2017mobilenets,
+  title={Mobilenets: Efficient convolutional neural networks for mobile vision applications},
+  author={Howard, Andrew G and Zhu, Menglong and Chen, Bo and Kalenichenko, Dmitry and Wang, Weijun and Weyand, Tobias and Andreetto, Marco and Adam, Hartwig},
+  journal={arXiv preprint arXiv:1704.04861},
   year={2017}
 }
 ```
