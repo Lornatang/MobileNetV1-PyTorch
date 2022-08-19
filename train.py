@@ -24,9 +24,9 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 import config
+import model
 from dataset import CUDAPrefetcher, ImageDataset
 from utils import accuracy, load_state_dict, make_directory, save_checkpoint, Summary, AverageMeter, ProgressMeter
-import model
 
 model_names = sorted(
     name for name in model.__dict__ if name.islower() and not name.startswith("__") and callable(model.__dict__[name]))
@@ -42,13 +42,13 @@ def main():
     train_prefetcher, valid_prefetcher = load_dataset()
     print(f"Load `{config.model_arch_name}` datasets successfully.")
 
-    xception_model, ema_xception_model = build_model()
+    mobilenet_v1_model, ema_mobilenet_v1_model = build_model()
     print(f"Build `{config.model_arch_name}` model successfully.")
 
     pixel_criterion = define_loss()
     print("Define all loss functions successfully.")
 
-    optimizer = define_optimizer(xception_model)
+    optimizer = define_optimizer(mobilenet_v1_model)
     print("Define all optimizer functions successfully.")
 
     scheduler = define_scheduler(optimizer)
@@ -56,10 +56,10 @@ def main():
 
     print("Check whether to load pretrained model weights...")
     if config.pretrained_model_weights_path:
-        xception_model, ema_xception_model, start_epoch, best_acc1, optimizer, scheduler = load_state_dict(
-            xception_model,
+        mobilenet_v1_model, ema_mobilenet_v1_model, start_epoch, best_acc1, optimizer, scheduler = load_state_dict(
+            mobilenet_v1_model,
             config.pretrained_model_weights_path,
-            ema_xception_model,
+            ema_mobilenet_v1_model,
             start_epoch,
             best_acc1,
             optimizer,
@@ -70,10 +70,10 @@ def main():
 
     print("Check whether the pretrained model is restored...")
     if config.resume:
-        xception_model, ema_xception_model, start_epoch, best_acc1, optimizer, scheduler = load_state_dict(
-            xception_model,
+        mobilenet_v1_model, ema_mobilenet_v1_model, start_epoch, best_acc1, optimizer, scheduler = load_state_dict(
+            mobilenet_v1_model,
             config.pretrained_model_weights_path,
-            ema_xception_model,
+            ema_mobilenet_v1_model,
             start_epoch,
             best_acc1,
             optimizer,
@@ -96,8 +96,8 @@ def main():
     scaler = amp.GradScaler()
 
     for epoch in range(start_epoch, config.epochs):
-        train(xception_model, ema_xception_model, train_prefetcher, pixel_criterion, optimizer, epoch, scaler, writer)
-        acc1 = validate(ema_xception_model, valid_prefetcher, epoch, writer, "Valid")
+        train(mobilenet_v1_model, ema_mobilenet_v1_model, train_prefetcher, pixel_criterion, optimizer, epoch, scaler, writer)
+        acc1 = validate(ema_mobilenet_v1_model, valid_prefetcher, epoch, writer, "Valid")
         print("\n")
 
         # Update LR
@@ -109,8 +109,8 @@ def main():
         best_acc1 = max(acc1, best_acc1)
         save_checkpoint({"epoch": epoch + 1,
                          "best_acc1": best_acc1,
-                         "state_dict": xception_model.state_dict(),
-                         "ema_state_dict": ema_xception_model.state_dict(),
+                         "state_dict": mobilenet_v1_model.state_dict(),
+                         "ema_state_dict": ema_mobilenet_v1_model.state_dict(),
                          "optimizer": optimizer.state_dict(),
                          "scheduler": scheduler.state_dict()},
                         f"epoch_{epoch + 1}.pth.tar",
@@ -157,13 +157,13 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher]:
 
 
 def build_model() -> [nn.Module, nn.Module]:
-    xception_model = model.__dict__[config.model_arch_name](num_classes=config.model_num_classes)
-    xception_model = xception_model.to(device=config.device, memory_format=torch.channels_last)
+    mobilenet_v1_model = model.__dict__[config.model_arch_name](num_classes=config.model_num_classes)
+    mobilenet_v1_model = mobilenet_v1_model.to(device=config.device, memory_format=torch.channels_last)
 
     ema_avg = lambda averaged_model_parameter, model_parameter, num_averaged: (1 - config.model_ema_decay) * averaged_model_parameter + config.model_ema_decay * model_parameter
-    ema_xception_model = AveragedModel(xception_model, avg_fn=ema_avg)
+    ema_mobilenet_v1_model = AveragedModel(mobilenet_v1_model, avg_fn=ema_avg)
 
-    return xception_model, ema_xception_model
+    return mobilenet_v1_model, ema_mobilenet_v1_model
 
 
 def define_loss() -> nn.CrossEntropyLoss:
@@ -243,10 +243,7 @@ def train(
         # Mixed precision training
         with amp.autocast():
             output = model(images)
-            loss_aux3 = config.loss_aux3_weights * criterion(output[0], target)
-            loss_aux2 = config.loss_aux2_weights * criterion(output[1], target)
-            loss_aux1 = config.loss_aux1_weights * criterion(output[2], target)
-            loss = loss_aux3 + loss_aux2 + loss_aux1
+            loss = config.loss_weights * criterion(output, target)
 
         # Backpropagation
         scaler.scale(loss).backward()
@@ -258,7 +255,7 @@ def train(
         ema_model.update_parameters(model)
 
         # measure accuracy and record loss
-        top1, top5 = accuracy(output[0], target, topk=(1, 5))
+        top1, top5 = accuracy(output, target, topk=(1, 5))
         losses.update(loss.item(), batch_size)
         acc1.update(top1[0].item(), batch_size)
         acc5.update(top5[0].item(), batch_size)

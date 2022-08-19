@@ -22,7 +22,7 @@ Contains MNIST, CIFAR10&CIFAR100, TinyImageNet_200, MiniImageNet_1K, ImageNet_1K
 ## Step3: Preprocess the dataset
 
 ```bash
-cd <Xception-PyTorch-main>/scripts
+cd <MobileNetV1-PyTorch-main>/scripts
 bash preprocess_imagenet.sh
 ```
 

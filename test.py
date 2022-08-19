@@ -27,10 +27,10 @@ model_names = sorted(
 
 
 def build_model() -> nn.Module:
-    xception_model = model.__dict__[config.model_arch_name](num_classes=config.model_num_classes)
-    xception_model = xception_model.to(device=config.device, memory_format=torch.channels_last)
+    mobilenet_v1_model = model.__dict__[config.model_arch_name](num_classes=config.model_num_classes)
+    mobilenet_v1_model = mobilenet_v1_model.to(device=config.device, memory_format=torch.channels_last)
 
-    return xception_model
+    return mobilenet_v1_model
 
 
 def load_dataset() -> CUDAPrefetcher:
@@ -55,16 +55,16 @@ def load_dataset() -> CUDAPrefetcher:
 
 def main() -> None:
     # Initialize the model
-    inception_v3_model = build_model()
+    mobilenet_v1_model = build_model()
     print(f"Build `{config.model_arch_name}` model successfully.")
 
     # Load model weights
-    inception_v3_model, _, _, _, _, _ = load_state_dict(inception_v3_model, config.model_weights_path)
+    mobilenet_v1_model, _, _, _, _, _ = load_state_dict(mobilenet_v1_model, config.model_weights_path)
     print(f"Load `{config.model_arch_name}` "
           f"model weights `{os.path.abspath(config.model_weights_path)}` successfully.")
 
     # Start the verification mode of the model.
-    inception_v3_model.eval()
+    mobilenet_v1_model.eval()
 
     # Load test dataloader
     test_prefetcher = load_dataset()
@@ -96,7 +96,7 @@ def main() -> None:
             batch_size = images.size(0)
 
             # Inference
-            output = inception_v3_model(images)
+            output = mobilenet_v1_model(images)
 
             # measure accuracy and record loss
             top1, top5 = accuracy(output, target, topk=(1, 5))

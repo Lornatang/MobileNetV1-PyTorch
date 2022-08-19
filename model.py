@@ -11,61 +11,57 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any
+from typing import Callable, Any, Optional
 
 import torch
 from torch import Tensor
 from torch import nn
+from torchvision.ops.misc import Conv2dNormActivation
 
 __all__ = [
-    "Xception",
-    "SeparableConv2d", "XceptionBlock",
-    "xception",
+    "MobileNetV1",
+    "DepthWiseSeparableConv2d",
+    "mobilenet_v1",
 ]
 
 
-class Xception(nn.Module):
+class MobileNetV1(nn.Module):
 
     def __init__(
             self,
             num_classes: int = 1000,
     ) -> None:
-        super(Xception, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=(3, 3), stride=(2, 2), padding=(0, 0), bias=False)
-        self.bn1 = nn.BatchNorm2d(32)
-        self.relu1 = nn.ReLU(True)
+        super(MobileNetV1, self).__init__()
+        self.features = nn.Sequential(
+            Conv2dNormActivation(3,
+                                 32,
+                                 kernel_size=3,
+                                 stride=2,
+                                 padding=1,
+                                 norm_layer=nn.BatchNorm2d,
+                                 activation_layer=nn.ReLU,
+                                 inplace=True,
+                                 bias=False,
+                                 ),
 
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=(3, 3), stride=(1, 1), padding=(0, 0), bias=False)
-        self.bn2 = nn.BatchNorm2d(64)
-        self.relu2 = nn.ReLU(True)
+            DepthWiseSeparableConv2d(32, 64, 1),
+            DepthWiseSeparableConv2d(64, 128, 2),
+            DepthWiseSeparableConv2d(128, 128, 1),
+            DepthWiseSeparableConv2d(128, 256, 2),
+            DepthWiseSeparableConv2d(256, 256, 1),
+            DepthWiseSeparableConv2d(256, 512, 2),
+            DepthWiseSeparableConv2d(512, 512, 1),
+            DepthWiseSeparableConv2d(512, 512, 1),
+            DepthWiseSeparableConv2d(512, 512, 1),
+            DepthWiseSeparableConv2d(512, 512, 1),
+            DepthWiseSeparableConv2d(512, 512, 1),
+            DepthWiseSeparableConv2d(512, 1024, 2),
+            DepthWiseSeparableConv2d(1024, 1024, 1),
+        )
 
-        self.block1 = XceptionBlock(64, 128, 2, False, True, 2)
-        self.block2 = XceptionBlock(128, 256, 2, True, True, 2)
-        self.block3 = XceptionBlock(256, 728, 2, True, True, 2)
+        self.avgpool = nn.AvgPool2d((7, 7))
 
-        self.block4 = XceptionBlock(728, 728, 1, True, True, 3)
-        self.block5 = XceptionBlock(728, 728, 1, True, True, 3)
-        self.block6 = XceptionBlock(728, 728, 1, True, True, 3)
-        self.block7 = XceptionBlock(728, 728, 1, True, True, 3)
-
-        self.block8 = XceptionBlock(728, 728, 1, True, True, 3)
-        self.block9 = XceptionBlock(728, 728, 1, True, True, 3)
-        self.block10 = XceptionBlock(728, 728, 1, True, True, 3)
-        self.block11 = XceptionBlock(728, 728, 1, True, True, 3)
-
-        self.block12 = XceptionBlock(728, 1024, 2, True, False, 2)
-
-        self.conv3 = SeparableConv2d(1024, 1536, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        self.bn3 = nn.BatchNorm2d(1536)
-        self.relu3 = nn.ReLU(inplace=True)
-
-        # do relu here
-        self.conv4 = SeparableConv2d(1536, 2048, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        self.bn4 = nn.BatchNorm2d(2048)
-        self.relu4 = nn.ReLU(True)
-
-        self.global_average_pooling = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(2048, num_classes)
+        self.classifier = nn.Linear(1024, num_classes)
 
         # Initialize neural network weights
         self._initialize_weights()
@@ -77,131 +73,75 @@ class Xception(nn.Module):
 
     # Support torch.script function
     def _forward_impl(self, x: Tensor) -> Tensor:
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu1(out)
-
-        out = self.conv2(out)
-        out = self.bn2(out)
-        out = self.relu2(out)
-
-        out = self.block1(out)
-        out = self.block2(out)
-        out = self.block3(out)
-        out = self.block4(out)
-        out = self.block5(out)
-        out = self.block6(out)
-        out = self.block7(out)
-        out = self.block8(out)
-        out = self.block9(out)
-        out = self.block10(out)
-        out = self.block11(out)
-        out = self.block12(out)
-
-        out = self.conv3(out)
-        out = self.bn3(out)
-        out = self.relu3(out)
-
-        out = self.conv4(out)
-        out = self.bn4(out)
-        out = self.relu4(out)
-
-        out = self.global_average_pooling(out)
+        out = self.features(x)
+        out = self.avgpool(out)
         out = torch.flatten(out, 1)
-        out = self.fc(out)
+        out = self.classifier(out)
 
         return out
 
     def _initialize_weights(self) -> None:
         for module in self.modules():
-            if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
-                stddev = float(module.stddev) if hasattr(module, "stddev") else 0.1
-                torch.nn.init.trunc_normal_(module.weight, mean=0.0, std=stddev, a=-2, b=2)
-            elif isinstance(module, nn.BatchNorm2d):
-                nn.init.constant_(module.weight, 1)
-                nn.init.constant_(module.bias, 0)
+            if isinstance(module, nn.Conv2d):
+                nn.init.kaiming_normal_(module.weight, mode="fan_out", nonlinearity="relu")
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+            elif isinstance(module, (nn.BatchNorm2d, nn.GroupNorm)):
+                nn.init.ones_(module.weight)
+                nn.init.zeros_(module.bias)
+            elif isinstance(module, nn.Linear):
+                nn.init.normal_(module.weight, 0, 0.01)
+                nn.init.zeros_(module.bias)
 
 
-class SeparableConv2d(nn.Module):
-    def __init__(
-            self,
-            in_channels: int,
-            out_channels: int,
-            **kwargs: Any
-    ) -> None:
-        super(SeparableConv2d, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, in_channels, groups=in_channels, bias=False, **kwargs)
-        self.pointwise = nn.Conv2d(in_channels, out_channels, kernel_size=(1, 1), stride=(1, 1), padding=(0, 0),
-                                   bias=False)
-
-    def forward(self, x: Tensor) -> Tensor:
-        out = self.conv1(x)
-        out = self.pointwise(out)
-
-        return out
-
-
-class XceptionBlock(nn.Module):
+class DepthWiseSeparableConv2d(nn.Module):
     def __init__(
             self,
             in_channels: int,
             out_channels: int,
             stride: int,
-            relu_first: bool,
-            grow_first: bool,
-            repeat_times: int,
+            norm_layer: Optional[Callable[..., nn.Module]] = None
     ) -> None:
-        super(XceptionBlock, self).__init__()
-        rep = []
+        super(DepthWiseSeparableConv2d, self).__init__()
+        self.stride = stride
+        if stride not in [1, 2]:
+            raise ValueError(f"stride should be 1 or 2 instead of {stride}")
 
-        if in_channels != out_channels or stride != 1:
-            self.skip = nn.Conv2d(in_channels, out_channels, kernel_size=(1, 1), stride=(stride, stride),
-                                  padding=(0, 0), bias=False)
-            self.skipbn = nn.BatchNorm2d(out_channels)
-        else:
-            self.skip = None
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
 
-        mid_channels = in_channels
-        if grow_first:
-            rep.append(nn.ReLU(True))
-            rep.append(SeparableConv2d(in_channels, out_channels, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)))
-            rep.append(nn.BatchNorm2d(out_channels))
-            mid_channels = out_channels
+        self.conv = nn.Sequential(
+            Conv2dNormActivation(in_channels,
+                                 in_channels,
+                                 kernel_size=3,
+                                 stride=stride,
+                                 padding=1,
+                                 groups=in_channels,
+                                 norm_layer=norm_layer,
+                                 activation_layer=nn.ReLU,
+                                 inplace=True,
+                                 bias=False,
+                                 ),
+            Conv2dNormActivation(in_channels,
+                                 out_channels,
+                                 kernel_size=1,
+                                 stride=1,
+                                 padding=0,
+                                 norm_layer=norm_layer,
+                                 activation_layer=nn.ReLU,
+                                 inplace=True,
+                                 bias=False,
+                                 ),
 
-        for _ in range(repeat_times - 1):
-            rep.append(nn.ReLU(True))
-            rep.append(SeparableConv2d(mid_channels, mid_channels, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)))
-            rep.append(nn.BatchNorm2d(mid_channels))
-
-        if not grow_first:
-            rep.append(nn.ReLU(True))
-            rep.append(SeparableConv2d(in_channels, out_channels, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)))
-            rep.append(nn.BatchNorm2d(out_channels))
-
-        if not relu_first:
-            rep = rep[1:]
-        else:
-            rep[0] = nn.ReLU(False)
-
-        if stride != 1:
-            rep.append(nn.MaxPool2d((3, 3), (stride, stride), (1, 1)))
-
-        self.rep = nn.Sequential(*rep)
+        )
 
     def forward(self, x: Tensor) -> Tensor:
-        if self.skip is not None:
-            identity = self.skip(x)
-            identity = self.skipbn(identity)
-        else:
-            identity = x
-
-        out = self.rep(x)
-        out = torch.add(out, identity)
+        out = self.conv(x)
 
         return out
 
 
-def xception(**kwargs: Any) -> Xception:
-    model = Xception(**kwargs)
+def mobilenet_v1(**kwargs: Any) -> MobileNetV1:
+    model = MobileNetV1(**kwargs)
 
     return model

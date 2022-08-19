@@ -26,10 +26,10 @@ device = torch.device("cuda", 0)
 # Turning on when the image size does not change during training can speed up training
 cudnn.benchmark = True
 # Model arch name
-model_arch_name = "xception"
+model_arch_name = "mobilenet_v1"
 # Model normalization parameters
-model_mean_parameters = [0.5, 0.5, 0.5]
-model_std_parameters = [0.5, 0.5, 0.5]
+model_mean_parameters = [0.485, 0.456, 0.406]
+model_std_parameters = [0.229, 0.224, 0.225]
 # Model number class
 model_num_classes = 1000
 # Current configuration parameter method
@@ -42,12 +42,12 @@ if mode == "train":
     train_image_dir = "./data/ImageNet_1K/ILSVRC2012_img_train"
     valid_image_dir = "./data/ImageNet_1K/ILSVRC2012_img_val"
 
-    image_size = 299
+    image_size = 224
     batch_size = 128
     num_workers = 4
 
     # The address to load the pretrained model
-    pretrained_model_weights_path = "results/pretrained_models/Xception-ImageNet_1K-a0b40234.pth.tar"
+    pretrained_model_weights_path = ""
 
     # Incremental training and migration training
     resume = ""
@@ -57,9 +57,7 @@ if mode == "train":
 
     # Loss parameters
     loss_label_smoothing = 0.1
-    loss_aux3_weights = 1.0
-    loss_aux2_weights = 0.3
-    loss_aux1_weights = 0.3
+    loss_weights = 1.0
 
     # Optimizer parameter
     model_lr = 0.1
@@ -81,7 +79,7 @@ if mode == "test":
     test_image_dir = "./data/ImageNet_1K/ILSVRC2012_img_val"
 
     # Test dataloader parameters
-    image_size = 299
+    image_size = 224
     batch_size = 256
     num_workers = 4
 
