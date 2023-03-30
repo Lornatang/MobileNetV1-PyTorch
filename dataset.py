@@ -16,7 +16,7 @@ import sys
 import threading
 from glob import glob
 
-import cv2
+import cv2 #this line of code imports the OpenCV library
 import torch
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
