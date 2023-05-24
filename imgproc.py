@@ -26,7 +26,7 @@ __all__ = [
 ]
 
 
-def image_to_tensor(image: np.ndarray, range_norm: bool, half: bool) -> torch.Tensor: ##undefined
+def image_to_tensor(image: np.ndarray, range_norm: bool, half: bool) -> torch.Tensor: ##converts a NumPy array representing an image to a PyTorch tensor
     """Convert the image data type to the Tensor (NCWH) data type supported by PyTorch
 
     Args:
@@ -43,20 +43,20 @@ def image_to_tensor(image: np.ndarray, range_norm: bool, half: bool) -> torch.Te
 
     """
     # Convert image data type to Tensor data type
-    tensor = F_vision.to_tensor(image) ##undefined
+    tensor = F_vision.to_tensor(image) ##converts the data type to tensor
 
     # Scale the image data from [0, 1] to [-1, 1]
-    if range_norm: ##undefined
-        tensor = tensor.mul(2.0).sub(1.0) ##undefined
+    if range_norm: ##checks if in normal range
+        tensor = tensor.mul(2.0).sub(1.0) #if it is then scale it
 
     # Convert torch.float32 image data type to torch.half image data type
-    if half: ##undefined
-        tensor = tensor.half() ##undefined
+    if half: ##if half is true
+        tensor = tensor.half() #halve the tensor
 
     return tensor
 
 
-def tensor_to_image(tensor: torch.Tensor, range_norm: bool, half: bool) -> Any: ##undefined
+def tensor_to_image(tensor: torch.Tensor, range_norm: bool, half: bool) -> Any: #convert the tensor into an image datatype
     """Convert the Tensor(NCWH) data type supported by PyTorch to the np.ndarray(WHC) image data type
 
     Args:
@@ -73,14 +73,14 @@ def tensor_to_image(tensor: torch.Tensor, range_norm: bool, half: bool) -> Any: 
 
     """
     # Scale the image data from [-1, 1] to [0, 1]
-    if range_norm: ##undefined
-        tensor = tensor.add(1.0).div(2.0) ##undefined
+    if range_norm: #checks if in normal range
+        tensor = tensor.add(1.0).div(2.0) #if it is then scale it
 
     # Convert torch.float32 image data type to torch.half image data type
-    if half: ##undefined
-        tensor = tensor.half() ##undefined
+    if half: #if half is true
+        tensor = tensor.half() #halve the tensor
 
-    image = tensor.squeeze(0).permute(1, 2, 0).mul(255).clamp(0, 255).cpu().numpy().astype("uint8") ##undefined
+    image = tensor.squeeze(0).permute(1, 2, 0).mul(255).clamp(0, 255).cpu().numpy().astype("uint8") #construct the image
 
     return image
 
@@ -95,27 +95,28 @@ def center_crop( ##undefined
     # Detect input image data type
     input_type = "Tensor" if torch.is_tensor(images[0]) else "Numpy"
 
-    if input_type == "Tensor": ##undefined
-        image_height, image_width = images[0].size()[-2:] ##undefined
+    if input_type == "Tensor": #if it is a tensor
+        image_height, image_width = images[0].size()[-2:] #then set the image with/height from the last two elements
     else:
-        image_height, image_width = images[0].shape[0:2] ##undefined
+        image_height, image_width = images[0].shape[0:2] #if it is not then set the shape
 
     # Calculate the start indices of the crop
-    top = (image_height - patch_size) // 2 ##undefined
-    left = (image_width - patch_size) // 2 ##undefined
+    top = (image_height - patch_size) // 2 #calculates the top regarding patch size
+    left = (image_width - patch_size) // 2 #calculates the left regarding patch size
 
     # Crop lr image patch
-    if input_type == "Tensor": ##undefined
-        images = [image[ ##undefined
+    if input_type == "Tensor": #if input is tensor
+        images = [image[ #create a new tuple for the image
                   :,
                   :,
-                  top:top + patch_size, ##undefined
-                  left:left + patch_size] for image in images] ##undefined
+                  top:top + patch_size, #use the calculated top with patch size
+                  left:left + patch_size] for image in images] #and left with patch size 
+                  #do this for all images
     else:
-        images = [image[ ##undefined
-                  top:top + patch_size, ##undefined
-                  left:left + patch_size, ##undefined
-                  ...] for image in images] ##undefined
+        images = [image[ #if input is an image
+                  top:top + patch_size, #initialize with the calculated top
+                  left:left + patch_size, #and left
+                  ...] for image in images] #for all images
 
     # When image number is 1
     if len(images) == 1:
@@ -124,7 +125,7 @@ def center_crop( ##undefined
     return images
 
 
-def random_crop( ##undefined
+def random_crop( #create a random crop in image
         images: ndarray | Tensor | list[ndarray] | list[Tensor],
         patch_size: int,
 ) -> [ndarray] or [Tensor] or [list[ndarray]] or [list[Tensor]]:
@@ -145,13 +146,13 @@ def random_crop( ##undefined
 
     # Crop lr image patch
     if input_type == "Tensor":
-        images = [image[ ##undefined
+        images = [image[ #creates the cropped images if tensor
                   :,
                   :,
                   top:top + patch_size,
                   left:left + patch_size] for image in images]
     else:
-        images = [image[ ##undefined
+        images = [image[ #and if image
                   top:top + patch_size,
                   left:left + patch_size,
                   ...] for image in images]
@@ -163,7 +164,7 @@ def random_crop( ##undefined
     return images
 
 
-def random_rotate( ##undefined
+def random_rotate( #rotates randomly
         images: ndarray | Tensor | list[ndarray] | list[Tensor],
         angles: list,
         center: tuple = None,
@@ -172,36 +173,36 @@ def random_rotate( ##undefined
     # Random select specific angle
     angle = random.choice(angles)
 
-    if not isinstance(images, list): ##undefined
+    if not isinstance(images, list): #if the image is not in list add it
         images = [images]
 
     # Detect input image data type
-    input_type = "Tensor" if torch.is_tensor(images[0]) else "Numpy" ##undefined
+    input_type = "Tensor" if torch.is_tensor(images[0]) else "Numpy" #detect the datatype of the image
 
-    if input_type == "Tensor": ##undefined
-        image_height, image_width = images[0].size()[-2:] ##undefined
+    if input_type == "Tensor": #if it is tensor
+        image_height, image_width = images[0].size()[-2:] #then set the image with/height from the last two elements
     else:
-        image_height, image_width = images[0].shape[0:2] ##undefined
+        image_height, image_width = images[0].shape[0:2] #set the shape if it is not tensor
 
     # Rotate LR image
-    if center is None: ##undefined
-        center = (image_width // 2, image_height // 2) ##undefined
+    if center is None: #if center is not initialized
+        center = (image_width // 2, image_height // 2) #calculate center
 
-    matrix = cv2.getRotationMatrix2D(center, angle, rotate_scale_factor) ##undefined
+    matrix = cv2.getRotationMatrix2D(center, angle, rotate_scale_factor) #create rotation matrix
 
-    if input_type == "Tensor": ##undefined
-        images = [F_vision.rotate(image, angle, center=center) for image in images] ##undefined
+    if input_type == "Tensor": #if it is a tensor
+        images = [F_vision.rotate(image, angle, center=center) for image in images] #rotate all images by a set angle
     else:
-        images = [cv2.warpAffine(image, matrix, (image_width, image_height)) for image in images] ##undefined
+        images = [cv2.warpAffine(image, matrix, (image_width, image_height)) for image in images] #if not tensor warp
 
     # When image number is 1
-    if len(images) == 1: ##undefined
+    if len(images) == 1: #if only one image
         images = images[0]
 
     return images
 
 
-def random_horizontally_flip( ##undefined
+def random_horizontally_flip( #random horizontal flip
         images: ndarray | Tensor | list[ndarray] | list[Tensor],
         p: float = 0.5
 ) -> [ndarray] or [Tensor] or [list[ndarray]] or [list[Tensor]]:
@@ -227,7 +228,7 @@ def random_horizontally_flip( ##undefined
     return images
 
 
-def random_vertically_flip( ##undefined
+def random_vertically_flip( #random vertical flip
         images: ndarray | Tensor | list[ndarray] | list[Tensor],
         p: float = 0.5
 ) -> [ndarray] or [Tensor] or [list[ndarray]] or [list[Tensor]]:
