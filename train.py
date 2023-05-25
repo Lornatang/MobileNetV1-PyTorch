@@ -11,25 +11,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import os ##undefined
-import time ##undefined
+import os ##operating system interfaces
+import time ##time access and conversions
 
-import torch ##undefined
-from torch import nn ##undefined
-from torch import optim ##undefined
-from torch.cuda import amp ##undefined
-from torch.optim import lr_scheduler ##undefined
-from torch.optim.swa_utils import AveragedModel ##undefined
-from torch.utils.data import DataLoader ##undefined
-from torch.utils.tensorboard import SummaryWriter ##undefined
+import torch ##pytorch library
+from torch import nn ##neural networks
+from torch import optim ##optimization module
+from torch.cuda import amp ##automatic mixed precision module from cuda
+from torch.optim import lr_scheduler ##learning rate scheduler
+from torch.optim.swa_utils import AveragedModel ##Stochastic Weight Averaging (SWA) technique during training
+from torch.utils.data import DataLoader ##dataloader for loading data
+from torch.utils.tensorboard import SummaryWriter ##logs/visualisation
 
-import config ##undefined
-import model ##undefined
-from dataset import CUDAPrefetcher, ImageDataset ##undefined
-from utils import accuracy, load_state_dict, make_directory, save_checkpoint, Summary, AverageMeter, ProgressMeter ##undefined
+import config ##import the config from project
+import model ##import the model from project
+from dataset import CUDAPrefetcher, ImageDataset #import the dataset 
+from utils import accuracy, load_state_dict, make_directory, save_checkpoint, Summary, AverageMeter, ProgressMeter ##dictionary and summary utilities
 
 model_names = sorted(
-    name for name in model.__dict__ if name.islower() and not name.startswith("__") and callable(model.__dict__[name])) ##undefined
+    name for name in model.__dict__ if name.islower() and not name.startswith("__") and callable(model.__dict__[name])) #sort all the model names
 
 
 def main():
@@ -39,38 +39,38 @@ def main():
     # Initialize training network evaluation indicators
     best_acc1 = 0.0
 
-    train_prefetcher, valid_prefetcher = load_dataset() ##undefined
+    train_prefetcher, valid_prefetcher = load_dataset() #prefetch the dataset (load)
     print(f"Load `{config.model_arch_name}` datasets successfully.")
 
-    mobilenet_v1_model, ema_mobilenet_v1_model = build_model() ##undefined
+    mobilenet_v1_model, ema_mobilenet_v1_model = build_model() #build the mobilenet model
     print(f"Build `{config.model_arch_name}` model successfully.")
 
-    pixel_criterion = define_loss() ##undefined
+    pixel_criterion = define_loss() #define loss functions
     print("Define all loss functions successfully.")
 
-    optimizer = define_optimizer(mobilenet_v1_model) ##undefined
+    optimizer = define_optimizer(mobilenet_v1_model) #optimize as you can
     print("Define all optimizer functions successfully.")
 
-    scheduler = define_scheduler(optimizer) ##undefined
+    scheduler = define_scheduler(optimizer) #define all the schedulers
     print("Define all optimizer scheduler functions successfully.")
 
     print("Check whether to load pretrained model weights...")
-    if config.pretrained_model_weights_path: ##undefined
-        mobilenet_v1_model, ema_mobilenet_v1_model, start_epoch, best_acc1, optimizer, scheduler = load_state_dict( ##undefined
-            mobilenet_v1_model, ##undefined
-            config.pretrained_model_weights_path, ##undefined
-            ema_mobilenet_v1_model, ##undefined
-            start_epoch, ##undefined
-            best_acc1, ##undefined
-            optimizer, ##undefined
-            scheduler) ##undefined
+    if config.pretrained_model_weights_path: #if there are pretrained weights
+        mobilenet_v1_model, ema_mobilenet_v1_model, start_epoch, best_acc1, optimizer, scheduler = load_state_dict( #load from dictionary
+            mobilenet_v1_model, #the model
+            config.pretrained_model_weights_path, #the config weights
+            ema_mobilenet_v1_model, #the model
+            start_epoch, #the start epoch
+            best_acc1, #the best accuracy
+            optimizer, #the optimizer
+            scheduler) #and the scheduler
         print(f"Loaded `{config.pretrained_model_weights_path}` pretrained model weights successfully.")
     else:
         print("Pretrained model weights not found.")
 
     print("Check whether the pretrained model is restored...")
-    if config.resume: ##undefined
-        mobilenet_v1_model, ema_mobilenet_v1_model, start_epoch, best_acc1, optimizer, scheduler = load_state_dict( ##undefined
+    if config.resume: #if it could restore the model
+        mobilenet_v1_model, ema_mobilenet_v1_model, start_epoch, best_acc1, optimizer, scheduler = load_state_dict( #load the weights in
             mobilenet_v1_model,
             config.pretrained_model_weights_path,
             ema_mobilenet_v1_model,
@@ -84,63 +84,63 @@ def main():
         print("Resume training model not found. Start training from scratch.")
 
     # Create a experiment results
-    samples_dir = os.path.join("samples", config.exp_name) ##undefined
-    results_dir = os.path.join("results", config.exp_name) ##undefined
-    make_directory(samples_dir) ##undefined
-    make_directory(results_dir) ##undefined
+    samples_dir = os.path.join("samples", config.exp_name) #set the sample directory
+    results_dir = os.path.join("results", config.exp_name) #and the result directory
+    make_directory(samples_dir) #create them
+    make_directory(results_dir) #create them
 
     # Create training process log file
-    writer = SummaryWriter(os.path.join("samples", "logs", config.exp_name)) ##undefined
+    writer = SummaryWriter(os.path.join("samples", "logs", config.exp_name)) #create the writer
 
     # Initialize the gradient scaler
-    scaler = amp.GradScaler() ##undefined
+    scaler = amp.GradScaler() #initialize the gradient scaler
 
     for epoch in range(start_epoch, config.epochs):
-        train(mobilenet_v1_model, ema_mobilenet_v1_model, train_prefetcher, pixel_criterion, optimizer, epoch, scaler, writer) ##undefined
-        acc1 = validate(ema_mobilenet_v1_model, valid_prefetcher, epoch, writer, "Valid") ##undefined
+        train(mobilenet_v1_model, ema_mobilenet_v1_model, train_prefetcher, pixel_criterion, optimizer, epoch, scaler, writer) #train te model
+        acc1 = validate(ema_mobilenet_v1_model, valid_prefetcher, epoch, writer, "Valid") #define accuracy
         print("\n")
 
         # Update LR
-        scheduler.step()  ##undefined
+        scheduler.step()  #update the scheduler
 
         # Automatically save the model with the highest index
-        is_best = acc1 > best_acc1  ##undefined
-        is_last = (epoch + 1) == config.epochs  ##undefined
-        best_acc1 = max(acc1, best_acc1)  ##undefined
-        save_checkpoint({"epoch": epoch + 1,  ##undefined
-                         "best_acc1": best_acc1,  ##undefined
-                         "state_dict": mobilenet_v1_model.state_dict(),  ##undefined
-                         "ema_state_dict": ema_mobilenet_v1_model.state_dict(),  ##undefined
-                         "optimizer": optimizer.state_dict(),  ##undefined
-                         "scheduler": scheduler.state_dict()},  ##undefined
-                        f"epoch_{epoch + 1}.pth.tar",  ##undefined
-                        samples_dir,  ##undefined
-                        results_dir,  ##undefined
-                        is_best,  ##undefined
+        is_best = acc1 > best_acc1  #set the new best
+        is_last = (epoch + 1) == config.epochs  #set the last 
+        best_acc1 = max(acc1, best_acc1)  #the best accuracy is the higher value
+        save_checkpoint({"epoch": epoch + 1,  #save checkpoint, incrementing epoch
+                         "best_acc1": best_acc1,  #set best accuracy
+                         "state_dict": mobilenet_v1_model.state_dict(),  #set state
+                         "ema_state_dict": ema_mobilenet_v1_model.state_dict(),  #set state
+                         "optimizer": optimizer.state_dict(),  #set optimizer
+                         "scheduler": scheduler.state_dict()},  ##set scheduler
+                        f"epoch_{epoch + 1}.pth.tar",  ##set epoch
+                        samples_dir,  #set samples dir
+                        results_dir,  #set results dir
+                        is_best,  #set is_best
                         is_last)
 
 
-def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher]:  ##undefined
+def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher]:  #dataset load function 
     # Load train, test and valid datasets
-    train_dataset = ImageDataset(config.train_image_dir,  ##undefined
-                                 config.image_size, ##undefined
-                                 config.model_mean_parameters, ##undefined
-                                 config.model_std_parameters, ##undefined
-                                 "Train") ##undefined
-    valid_dataset = ImageDataset(config.valid_image_dir, ##undefined
+    train_dataset = ImageDataset(config.train_image_dir,  #load directory from config
+                                 config.image_size, #load image size
+                                 config.model_mean_parameters, #load mean parameters
+                                 config.model_std_parameters, #load std parameters
+                                 "Train") #and train
+    valid_dataset = ImageDataset(config.valid_image_dir, #load img dir for valid dataset
                                  config.image_size,
                                  config.model_mean_parameters,
                                  config.model_std_parameters,
                                  "Valid")
 
     # Generator all dataloader
-    train_dataloader = DataLoader(train_dataset, ##undefined
-                                  batch_size=config.batch_size, ##undefined
-                                  shuffle=True, ##undefined
-                                  num_workers=config.num_workers, ##undefined
-                                  pin_memory=True, ##undefined
-                                  drop_last=True, ##undefined
-                                  persistent_workers=True) ##undefined
+    train_dataloader = DataLoader(train_dataset, #load train dataset
+                                  batch_size=config.batch_size, #read batch size
+                                  shuffle=True, #enable shuffle for randomness
+                                  num_workers=config.num_workers, #set number of workers
+                                  pin_memory=True, #set pin memory to true
+                                  drop_last=True, #set drop last to true
+                                  persistent_workers=True) #set persistent workers to true
     valid_dataloader = DataLoader(valid_dataset,
                                   batch_size=config.batch_size,
                                   shuffle=False,
@@ -150,34 +150,34 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher]:  ##undefined
                                   persistent_workers=True)
 
     # Place all data on the preprocessing data loader
-    train_prefetcher = CUDAPrefetcher(train_dataloader, config.device) ##undefined
-    valid_prefetcher = CUDAPrefetcher(valid_dataloader, config.device) ##undefined
+    train_prefetcher = CUDAPrefetcher(train_dataloader, config.device) #place in prefetcher
+    valid_prefetcher = CUDAPrefetcher(valid_dataloader, config.device) #place in prefetcher
 
     return train_prefetcher, valid_prefetcher
 
 
-def build_model() -> [nn.Module, nn.Module]:  ##undefined
-    mobilenet_v1_model = model.__dict__[config.model_arch_name](num_classes=config.model_num_classes)  ##undefined
-    mobilenet_v1_model = mobilenet_v1_model.to(device=config.device, memory_format=torch.channels_last) ##undefined
+def build_model() -> [nn.Module, nn.Module]:  #build model function
+    mobilenet_v1_model = model.__dict__[config.model_arch_name](num_classes=config.model_num_classes)  #load architecture and num classes
+    mobilenet_v1_model = mobilenet_v1_model.to(device=config.device, memory_format=torch.channels_last) #set device and memory
 
-    ema_avg = lambda averaged_model_parameter, model_parameter, num_averaged: (1 - config.model_ema_decay) * averaged_model_parameter + config.model_ema_decay * model_parameter ##undefined
-    ema_mobilenet_v1_model = AveragedModel(mobilenet_v1_model, avg_fn=ema_avg) ##undefined
+    ema_avg = lambda averaged_model_parameter, model_parameter, num_averaged: (1 - config.model_ema_decay) * averaged_model_parameter + config.model_ema_decay * model_parameter #calculate the average
+    ema_mobilenet_v1_model = AveragedModel(mobilenet_v1_model, avg_fn=ema_avg) #set the avg model
 
-    return mobilenet_v1_model, ema_mobilenet_v1_model ##undefined
-
-
-def define_loss() -> nn.CrossEntropyLoss: ##undefined
-    criterion = nn.CrossEntropyLoss(label_smoothing=config.loss_label_smoothing) ##undefined
-    criterion = criterion.to(device=config.device, memory_format=torch.channels_last) ##undefined
-
-    return criterion ##undefined
+    return mobilenet_v1_model, ema_mobilenet_v1_model #return it
 
 
-def *define_optimizer(model) -> optim.SGD: ##undefined
-    optimizer = optim.SGD(model.parameters(), ##undefined
-                          lr=config.model_lr, ##undefined
-                          momentum=config.model_momentum, ##undefined
-                          weight_decay=config.model_weight_decay) ##undefined
+def define_loss() -> nn.CrossEntropyLoss: #define loss function
+    criterion = nn.CrossEntropyLoss(label_smoothing=config.loss_label_smoothing) #crossentropy criterion for loss
+    criterion = criterion.to(device=config.device, memory_format=torch.channels_last) #add the criterion to device
+
+    return criterion #return it
+
+
+def *define_optimizer(model) -> optim.SGD: #optimizer definition
+    optimizer = optim.SGD(model.parameters(), #load parameters
+                          lr=config.model_lr, #load lr
+                          momentum=config.model_momentum, #load momentum 
+                          weight_decay=config.model_weight_decay) #load weight decay
 
     return optimizer
 
@@ -304,7 +304,7 @@ def validate(
     # Get the initialization test time
     end = time.time()
 
-    with torch.no_grad(): ##undefined
+    with torch.no_grad(): ##Context manager to disable gradient calculation, used during inference/testing to save memory and speed up computation
         while batch_data is not None:
             # Transfer in-memory data to CUDA devices to speed up training
             images = batch_data["image"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
@@ -346,5 +346,5 @@ def validate(
     return acc1.avg
 
 
-if __name__ == "__main__": ##undefined
-    main() ##undefined
+if __name__ == "__main__": #runner
+    main() #calls main
