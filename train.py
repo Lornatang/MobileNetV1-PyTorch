@@ -182,93 +182,93 @@ def *define_optimizer(model) -> optim.SGD: #optimizer definition
     return optimizer
 
 
-def define_scheduler(optimizer: optim.SGD) -> lr_scheduler.CosineAnnealingWarmRestarts: ##undefined
-    scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer, ##undefined
-                                                         config.lr_scheduler_T_0, ##undefined
-                                                         config.lr_scheduler_T_mult, ##undefined
-                                                         config.lr_scheduler_eta_min) ##undefined
+def define_scheduler(optimizer: optim.SGD) -> lr_scheduler.CosineAnnealingWarmRestarts: #schduler definition
+    scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer, #loads the optimizer
+                                                         config.lr_scheduler_T_0, #loads  t0
+                                                         config.lr_scheduler_T_mult, ##loads tmult
+                                                         config.lr_scheduler_eta_min) ##loads eta min
 
     return scheduler
 
 
-def train( ##undefined
-        model: nn.Module, ##undefined
-        ema_model: nn.Module, ##undefined
-        train_prefetcher: CUDAPrefetcher, ##undefined
-        criterion: nn.CrossEntropyLoss, ##undefined
-        optimizer: optim.Adam, ##undefined
-        epoch: int, ##undefined
-        scaler: amp.GradScaler, ##undefined
-        writer: SummaryWriter ##undefined
+def train( #train function
+        model: nn.Module, #load neural network module
+        ema_model: nn.Module, #exp moving average model
+        train_prefetcher: CUDAPrefetcher, #data prefetcher
+        criterion: nn.CrossEntropyLoss, #loss function
+        optimizer: optim.Adam, #optimization algorithm
+        epoch: int, #epoch number of training
+        scaler: amp.GradScaler, #gradient scaler for mixed precision
+        writer: SummaryWriter #writer for exporting
 ) -> None:
     # Calculate how many batches of data are in each Epoch
-    batches = len(train_prefetcher) ##undefined
+    batches = len(train_prefetcher) #batches is length of the prefetcher
     # Print information of progress bar during training
-    batch_time = AverageMeter("Time", ":6.3f") ##undefined
-    data_time = AverageMeter("Data", ":6.3f") ##undefined
-    losses = AverageMeter("Loss", ":6.6f") ##undefined
-    acc1 = AverageMeter("Acc@1", ":6.2f") ##undefined
-    acc5 = AverageMeter("Acc@5", ":6.2f") ##undefined
-    progress = ProgressMeter(batches, ##undefined
+    batch_time = AverageMeter("Time", ":6.3f") #prints batch time 
+    data_time = AverageMeter("Data", ":6.3f") #data time
+    losses = AverageMeter("Loss", ":6.6f") #losses
+    acc1 = AverageMeter("Acc@1", ":6.2f") #accuracy @ 1
+    acc5 = AverageMeter("Acc@5", ":6.2f") #accuracy @ 5
+    progress = ProgressMeter(batches, #progress print dependent on batches
                              [batch_time, data_time, losses, acc1, acc5],
                              prefix=f"Epoch: [{epoch + 1}]")
 
     # Put the generative network model in training mode
-    model.train() ##undefined
+    model.train() #train the model
 
     # Initialize the number of data batches to print logs on the terminal
-    batch_index = 0 ##undefined
+    batch_index = 0 #initialize batch index with 0
 
     # Initialize the data loader and load the first batch of data
-    train_prefetcher.reset() ##undefined
-    batch_data = train_prefetcher.next() ##undefined
+    train_prefetcher.reset() #reset the prefetcher
+    batch_data = train_prefetcher.next() #load the data
 
     # Get the initialization training time
     end = time.time()
 
-    while batch_data is not None: ##undefined
+    while batch_data is not None: #while there is data to run on
         # Calculate the time it takes to load a batch of data
         data_time.update(time.time() - end)
 
         # Transfer in-memory data to CUDA devices to speed up training
-        images = batch_data["image"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True) ##undefined
-        target = batch_data["target"].to(device=config.device, non_blocking=True)  ##undefined
+        images = batch_data["image"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True) #load image
+        target = batch_data["target"].to(device=config.device, non_blocking=True)  #set target device
 
         # Get batch size
         batch_size = images.size(0)
 
         # Initialize generator gradients
-        model.zero_grad(set_to_none=True) ##undefined
+        model.zero_grad(set_to_none=True) #initialize gradient
 
         # Mixed precision training
-        with amp.autocast(): ##undefined
-            output = model(images) ##undefined
-            loss = config.loss_weights * criterion(output, target) ##undefined
+        with amp.autocast(): #automatic mixed precision
+            output = model(images) #compute output of model
+            loss = config.loss_weights * criterion(output, target) #compute loss
 
         # Backpropagation
-        scaler.scale(loss).backward() ##undefined
+        scaler.scale(loss).backward() #scale the loss backwards
         # update generator weights
-        scaler.step(optimizer) ##undefined
-        scaler.update() ##undefined
+        scaler.step(optimizer) #optimize
+        scaler.update() #update scale
 
         # Update EMA
-        ema_model.update_parameters(model) ##undefined
+        ema_model.update_parameters(model) #exp moving avg model update
 
         # measure accuracy and record loss
-        top1, top5 = accuracy(output, target, topk=(1, 5)) ##undefined
-        losses.update(loss.item(), batch_size) ##undefined
-        acc1.update(top1[0].item(), batch_size) ##undefined
-        acc5.update(top5[0].item(), batch_size) ##undefined
+        top1, top5 = accuracy(output, target, topk=(1, 5)) #measury top1,5 with topk function
+        losses.update(loss.item(), batch_size) #update the losses
+        acc1.update(top1[0].item(), batch_size) ##update accuracy @1
+        acc5.update(top5[0].item(), batch_size) #update accuracy @5
 
         # Calculate the time it takes to fully train a batch of data
-        batch_time.update(time.time() - end) ##undefined
-        end = time.time() ##undefined
+        batch_time.update(time.time() - end) #update batch time
+        end = time.time() #set end time
 
         # Write the data during training to the training log file
         if batch_index % config.train_print_frequency == 0:
             # Record loss during training and output to file
-            writer.add_scalar("Train/Loss", loss.item(), batch_index + epoch * batches + 1) ##undefined
-            progress.display(batch_index + 1) ##undefined
+            writer.add_scalar("Train/Loss", loss.item(), batch_index + epoch * batches + 1) #write data in log
+            progress.display(batch_index + 1) #display on progress the current batch
 
         # Preload the next batch of data
         batch_data = train_prefetcher.next()
